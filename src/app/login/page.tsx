@@ -26,12 +26,13 @@ function LoginContent() {
                 body: JSON.stringify({ username, password }),
             })
             const d = await r.json()
-            if (!r.ok) { setError(d.error || 'Login failed'); setLoading(false); return }
-            if (d.user?.role === 'ADMIN' || from === 'admin') {
-                router.push('/admin')
-            } else {
-                router.push('/')
+            if (!r.ok) {
+                setError(d.error || 'Login failed')
+                setLoading(false)
+                return
             }
+            if (d.user?.role === 'ADMIN' || from === 'admin') router.push('/admin')
+            else router.push('/')
         } catch {
             setError('Something went wrong. Please try again.')
             setLoading(false)
@@ -43,7 +44,6 @@ function LoginContent() {
             <Navbar />
             <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
                 <div style={{ width: '100%', maxWidth: '400px' }}>
-                    {/* Card */}
                     <div className="glass-bright" style={{ padding: '36px' }}>
                         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                             <div style={{
@@ -74,7 +74,8 @@ function LoginContent() {
                                 marginBottom: '20px',
                                 textAlign: 'center',
                             }}>
-                                🔐 Admin credentials required
+                                <i className="fa-solid fa-lock" style={{ marginRight: '8px' }}></i>
+                                Admin credentials required
                             </div>
                         )}
 
@@ -149,7 +150,10 @@ function LoginContent() {
                     </div>
 
                     <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                        <Link href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>← Back to rankings</Link>
+                        <Link href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
+                            <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i>
+                            Back to rankings
+                        </Link>
                     </p>
                 </div>
             </main>

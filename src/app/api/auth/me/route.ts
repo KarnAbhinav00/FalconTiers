@@ -11,15 +11,37 @@ export async function GET(req: NextRequest) {
 
         const { payload } = await jwtVerify(token, JWT_SECRET)
         const userId = payload.userId as number
+        let user = null
+        try {
+            user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true, username: true, email: true, role: true,
+                    igName: true, displayName: true, avatarUrl: true, bio: true,
+                    isBanned: true, createdAt: true,
+                }
+            })
+        } catch (dbError) {
+            console.error('Auth me DB error:', dbError)
+        }
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                id: true, username: true, email: true, role: true,
-                igName: true, displayName: true, avatarUrl: true, bio: true,
-                isBanned: true, createdAt: true,
-            }
-        })
+        if (!user && payload.role === 'ADMIN') {
+            return NextResponse.json({
+                user: {
+                    id: userId || 0,
+                    username: String(payload.username || process.env.ADMIN_USERNAME || 'admin'),
+                    email: 'admin@local',
+                    role: 'ADMIN',
+                    igName: '',
+                    displayName: 'Admin',
+                    avatarUrl: '',
+                    bio: '',
+                    isBanned: false,
+                    createdAt: new Date(0).toISOString(),
+                },
+                player: null,
+            })
+        }
 
         if (!user) return NextResponse.json({ user: null })
         if (user.isBanned) {
@@ -27,11 +49,15 @@ export async function GET(req: NextRequest) {
             response.cookies.set('token', '', { httpOnly: true, maxAge: 0, path: '/' })
             return response
         }
-
-        const player = await prisma.player.findFirst({
-            where: { userId },
-            include: { rankings: true }
-        })
+        let player = null
+        try {
+            player = await prisma.player.findFirst({
+                where: { userId },
+                include: { rankings: true }
+            })
+        } catch (dbError) {
+            console.error('Auth me player fetch error:', dbError)
+        }
 
         return NextResponse.json({ user, player })
     } catch {
