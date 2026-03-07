@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { runtimeSearchPlayers } from '@/lib/runtimeStore'
 
 export async function GET(req: NextRequest) {
+    const { searchParams } = new URL(req.url)
+    const q = searchParams.get('q')?.trim() || ''
+
+    if (q.length < 2) {
+        return NextResponse.json({ results: [] })
+    }
+
     try {
-        const { searchParams } = new URL(req.url)
-        const q = searchParams.get('q')?.trim()
-
-        if (!q || q.length < 2) {
-            return NextResponse.json({ results: [] })
-        }
-
         const players = await prisma.player.findMany({
             where: {
                 OR: [
@@ -41,6 +42,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ results })
     } catch (error) {
         console.error('Search error:', error)
-        return NextResponse.json({ error: 'Search failed' }, { status: 500 })
+        return NextResponse.json({ results: runtimeSearchPlayers(q), degraded: true })
     }
 }

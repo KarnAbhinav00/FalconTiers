@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { runtimeGetCategoryRankings } from '@/lib/runtimeStore'
 
 export async function GET(req: NextRequest) {
+    const { searchParams } = new URL(req.url)
+    const category = searchParams.get('category')?.toUpperCase()
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '100')
+
     try {
-        const { searchParams } = new URL(req.url)
-        const category = searchParams.get('category')?.toUpperCase()
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '100')
         const skip = (page - 1) * limit
 
         const validCategories = ['CPVP', 'NETHPOT', 'CRYSTAL', 'UHC', 'SMP', 'POT', 'AXE', 'SWORD', 'MACE', 'DSMP', 'CART', 'SMPKIT']
@@ -47,6 +49,13 @@ export async function GET(req: NextRequest) {
         })
     } catch (error) {
         console.error('Players fetch error:', error)
-        return NextResponse.json({ error: 'Failed to fetch players' }, { status: 500 })
+        const fallback = runtimeGetCategoryRankings(category || '', page, limit)
+        return NextResponse.json({
+            rankings: fallback.rankings,
+            total: fallback.total,
+            page,
+            totalPages: Math.ceil(fallback.total / limit),
+            degraded: true,
+        })
     }
 }

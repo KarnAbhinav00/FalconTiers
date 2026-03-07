@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
+import { runtimeDeleteRanking, runtimeUpdateRanking } from '@/lib/runtimeStore'
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
 
@@ -20,11 +21,22 @@ async function getAdminUser(req: NextRequest) {
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const admin = await getAdminUser(req)
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let rankingId = -1
+    let rank: number | undefined
+    let points: number | undefined
+    let badges: string[] | undefined
+    let displayName: string | undefined
+    let avatarUrl: string | undefined
 
     try {
         const { id } = await params
-        const rankingId = parseInt(id)
-        const { rank, points, badges, displayName, avatarUrl } = await req.json()
+        rankingId = parseInt(id)
+        const body = await req.json()
+        rank = body.rank
+        points = body.points
+        badges = body.badges
+        displayName = body.displayName
+        avatarUrl = body.avatarUrl
 
         const ranking = await prisma.playerRanking.findUnique({
             where: { id: rankingId },
@@ -48,8 +60,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         const updated = await prisma.playerRanking.update({
             where: { id: rankingId },
             data: {
-                ...(rank !== undefined && { rank: parseInt(rank) }),
-                ...(points !== undefined && { points: parseInt(points) }),
+                ...(rank !== undefined && { rank: Number(rank) }),
+                ...(points !== undefined && { points: Number(points) }),
                 ...(badges !== undefined && { badges: JSON.stringify(badges) }),
             },
             include: { player: true }
@@ -61,7 +73,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         })
     } catch (error) {
         console.error('Update player error:', error)
-        return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
+        const fallback = runtimeUpdateRanking(rankingId, {
+            rank: rank !== undefined ? Number(rank) : undefined,
+            points: points !== undefined ? Number(points) : undefined,
+            badges: badges !== undefined ? badges : undefined,
+            displayName,
+            avatarUrl,
+        })
+        if (!fallback) return NextResponse.json({ error: 'Ranking not found' }, { status: 404 })
+        return NextResponse.json({
+            success: true,
+            ranking: { ...fallback.ranking, player: fallback.player, degraded: true },
+        })
     }
 }
 
@@ -69,15 +92,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const admin = await getAdminUser(req)
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let rankingId = -1
 
     try {
         const { id } = await params
-        const rankingId = parseInt(id)
+        rankingId = parseInt(id)
 
         await prisma.playerRanking.delete({ where: { id: rankingId } })
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error('Delete error:', error)
-        return NextResponse.json({ error: 'Failed to delete' }, { status: 500 })
+        const ok = runtimeDeleteRanking(rankingId)
+        if (!ok) return NextResponse.json({ error: 'Ranking not found' }, { status: 404 })
+        return NextResponse.json({ success: true, degraded: true })
     }
 }

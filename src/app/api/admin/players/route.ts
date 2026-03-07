@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
+import { runtimeAddPlayerRanking, runtimeGetPlayersWithRankings } from '@/lib/runtimeStore'
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
 
@@ -21,20 +22,25 @@ export async function GET(req: NextRequest) {
     const admin = await getAdminUser(req)
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const players = await prisma.player.findMany({
-        include: { rankings: { orderBy: { category: 'asc' } } },
-        orderBy: { displayName: 'asc' }
-    })
+    try {
+        const players = await prisma.player.findMany({
+            include: { rankings: { orderBy: { category: 'asc' } } },
+            orderBy: { displayName: 'asc' }
+        })
 
-    return NextResponse.json({
-        players: players.map(p => ({
-            ...p,
-            rankings: p.rankings.map(r => ({
-                ...r,
-                badges: JSON.parse(r.badges)
+        return NextResponse.json({
+            players: players.map(p => ({
+                ...p,
+                rankings: p.rankings.map(r => ({
+                    ...r,
+                    badges: JSON.parse(r.badges)
+                }))
             }))
-        }))
-    })
+        })
+    } catch (error) {
+        console.error('Admin players GET fallback:', error)
+        return NextResponse.json({ players: runtimeGetPlayersWithRankings(), degraded: true })
+    }
 }
 
 // POST /api/admin/players - add a new player
@@ -92,6 +98,24 @@ export async function POST(req: NextRequest) {
         })
     } catch (error) {
         console.error('Add player error:', error)
-        return NextResponse.json({ error: 'Failed to add player' }, { status: 500 })
+        try {
+            const { username, displayName, avatarUrl, category, rank, points, badges } = await req.json()
+            const fallback = runtimeAddPlayerRanking({
+                username,
+                displayName,
+                avatarUrl,
+                category,
+                rank: parseInt(rank),
+                points: parseInt(points) || 0,
+                badges: badges || [],
+            })
+            if ('error' in fallback) return NextResponse.json({ error: fallback.error }, { status: 409 })
+            return NextResponse.json({
+                success: true,
+                ranking: { ...fallback.ranking, player: fallback.player, degraded: true }
+            })
+        } catch {
+            return NextResponse.json({ error: 'Failed to add player' }, { status: 500 })
+        }
     }
 }
