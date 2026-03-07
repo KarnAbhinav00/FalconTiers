@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
-import { runtimeAddPlayerRanking, runtimeGetPlayersWithRankings } from '@/lib/runtimeStore'
+import {
+  runtimeAddPlayerRanking,
+  runtimeDeleteRanking,
+  runtimeGetPlayersWithRankings,
+  runtimeUpdateRanking,
+} from '@/lib/runtimeStore'
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
 
@@ -103,5 +108,81 @@ export async function POST(req: NextRequest) {
       success: true,
       ranking: { ...fallback.ranking, player: fallback.player, degraded: true },
     })
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  const admin = await getAdminUser(req)
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await req.json()
+  const { id, rank, points, badges, displayName, avatarUrl } = body
+  const rankingId = Number(id)
+  if (!rankingId) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+
+  try {
+    const ranking = await prisma.playerRanking.findUnique({
+      where: { id: rankingId },
+      include: { player: true },
+    })
+    if (!ranking) return NextResponse.json({ error: 'Ranking not found' }, { status: 404 })
+
+    if (displayName || avatarUrl !== undefined) {
+      await prisma.player.update({
+        where: { id: ranking.playerId },
+        data: {
+          ...(displayName && { displayName: String(displayName) }),
+          ...(avatarUrl !== undefined && { avatarUrl: String(avatarUrl) }),
+        },
+      })
+    }
+
+    const updated = await prisma.playerRanking.update({
+      where: { id: rankingId },
+      data: {
+        ...(rank !== undefined && { rank: Number(rank) }),
+        ...(points !== undefined && { points: Number(points) }),
+        ...(badges !== undefined && { badges: JSON.stringify(badges) }),
+      },
+      include: { player: true },
+    })
+
+    return NextResponse.json({
+      success: true,
+      ranking: { ...updated, badges: JSON.parse(updated.badges) },
+    })
+  } catch (error) {
+    console.error('Update player fallback:', error)
+    const fallback = runtimeUpdateRanking(rankingId, {
+      rank: rank !== undefined ? Number(rank) : undefined,
+      points: points !== undefined ? Number(points) : undefined,
+      badges: badges !== undefined ? badges : undefined,
+      displayName: displayName !== undefined ? String(displayName) : undefined,
+      avatarUrl: avatarUrl !== undefined ? String(avatarUrl) : undefined,
+    })
+    if (!fallback) return NextResponse.json({ error: 'Ranking not found' }, { status: 404 })
+    return NextResponse.json({
+      success: true,
+      ranking: { ...fallback.ranking, player: fallback.player, degraded: true },
+    })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const admin = await getAdminUser(req)
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await req.json()
+  const rankingId = Number(body?.id)
+  if (!rankingId) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+
+  try {
+    await prisma.playerRanking.delete({ where: { id: rankingId } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Delete player fallback:', error)
+    const ok = runtimeDeleteRanking(rankingId)
+    if (!ok) return NextResponse.json({ error: 'Ranking not found' }, { status: 404 })
+    return NextResponse.json({ success: true, degraded: true })
   }
 }

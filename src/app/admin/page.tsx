@@ -186,7 +186,7 @@ export default function AdminPage() {
 
     const handleEdit = async (id: number) => {
         try {
-            const r = await fetch(`/api/admin/players/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rank: editForm.rank ? parseInt(editForm.rank) : undefined, points: editForm.points ? parseInt(editForm.points) : undefined, badges: editForm.badges, displayName: editForm.displayName || undefined, avatarUrl: editForm.avatarUrl !== undefined ? editForm.avatarUrl : undefined }) })
+            const r = await fetch('/api/admin/players', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, rank: editForm.rank ? parseInt(editForm.rank) : undefined, points: editForm.points ? parseInt(editForm.points) : undefined, badges: editForm.badges, displayName: editForm.displayName || undefined, avatarUrl: editForm.avatarUrl !== undefined ? editForm.avatarUrl : undefined }) })
             const d = await r.json()
             if (!r.ok) showToast(d.error || 'Failed', 'error')
             else { showToast('Updated!', 'success'); setEditId(null); fetchRankings() }
@@ -194,7 +194,7 @@ export default function AdminPage() {
     }
 
     const handleDelete = (id: number, name: string) => {
-        setModal({ title: 'Remove Player', message: `Remove ${name} from rankings? This cannot be undone.`, danger: true, onConfirm: async () => { setModal(null); const r = await fetch(`/api/admin/players/${id}`, { method: 'DELETE' }); if (r.ok) { showToast('Removed', 'success'); fetchRankings() } else showToast('Failed', 'error') } })
+        setModal({ title: 'Remove Player', message: `Remove ${name} from rankings? This cannot be undone.`, danger: true, onConfirm: async () => { setModal(null); const r = await fetch('/api/admin/players', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); if (r.ok) { showToast('Removed', 'success'); fetchRankings() } else showToast('Failed', 'error') } })
     }
 
     // Application actions
