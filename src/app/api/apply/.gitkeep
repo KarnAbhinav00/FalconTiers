@@ -1,0 +1,5 @@
+// New API routes for apply system and user settings
+
+// ---- /api/apply/route.ts ----
+// POST: submit application
+// GET: get user's own applications
