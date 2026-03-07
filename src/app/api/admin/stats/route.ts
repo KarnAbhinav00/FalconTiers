@@ -9,10 +9,17 @@ export async function GET(req: NextRequest) {
   const token = req.cookies.get('token')?.value
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  let payload
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    if (payload.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const verified = await jwtVerify(token, JWT_SECRET)
+    payload = verified.payload
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
+  if (payload.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  try {
     const [totalPlayers, grouped] = await Promise.all([
       prisma.player.count(),
       prisma.playerRanking.groupBy({
@@ -26,7 +33,10 @@ export async function GET(req: NextRequest) {
     for (const row of grouped) categories[row.category] = row._count.category
 
     return NextResponse.json({ totalPlayers, categories })
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  } catch (error) {
+    console.error('Admin stats DB error:', error)
+    const categories: Record<string, number> = {}
+    for (const key of CATEGORIES) categories[key] = 0
+    return NextResponse.json({ totalPlayers: 0, categories, degraded: true })
   }
 }
