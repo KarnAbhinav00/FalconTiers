@@ -44,6 +44,16 @@ function shiftDownCategoryRanks(category: string, startRank: number) {
   }
 }
 
+function compactCategoryRanks(category: string) {
+  const store = getStore()
+  const rows = store.rankings
+    .filter((r) => r.category === category)
+    .sort((a, b) => a.rank - b.rank || a.id - b.id)
+  rows.forEach((r, i) => {
+    r.rank = i + 1
+  })
+}
+
 export function runtimeGetPlayersWithRankings() {
   const store = getStore()
   return store.players
@@ -88,17 +98,22 @@ export function runtimeAddPlayerRanking(input: {
   const duplicate = store.rankings.find((r) => r.playerId === player!.id && r.category === category)
   if (duplicate) return { error: 'Player already ranked in this category' as const }
 
-  shiftDownCategoryRanks(category, input.rank)
+  const existingCount = store.rankings.filter((r) => r.category === category).length
+  const requestedRank = Number.isFinite(input.rank) ? Math.floor(input.rank) : 1
+  const insertRank = Math.min(Math.max(requestedRank, 1), existingCount + 1)
+
+  shiftDownCategoryRanks(category, insertRank)
 
   const ranking: RuntimeRanking = {
     id: store.nextRankingId++,
     playerId: player.id,
     category,
-    rank: input.rank,
+    rank: insertRank,
     points,
     badges,
   }
   store.rankings.push(ranking)
+  compactCategoryRanks(category)
   return { ranking, player }
 }
 
@@ -116,7 +131,15 @@ export function runtimeUpdateRanking(
     if (patch.avatarUrl !== undefined) player.avatarUrl = patch.avatarUrl
   }
 
-  if (patch.rank !== undefined) ranking.rank = patch.rank
+  if (patch.rank !== undefined) {
+    const categoryRows = store.rankings
+      .filter((r) => r.category === ranking.category)
+      .sort((a, b) => a.rank - b.rank || a.id - b.id)
+    const maxRank = Math.max(categoryRows.length, 1)
+    const nextRank = Math.min(Math.max(Math.floor(patch.rank), 1), maxRank)
+    ranking.rank = nextRank
+    compactCategoryRanks(ranking.category)
+  }
   if (patch.points !== undefined) ranking.points = patch.points
   if (patch.badges !== undefined) ranking.badges = patch.badges
 
@@ -127,7 +150,9 @@ export function runtimeDeleteRanking(rankingId: number) {
   const store = getStore()
   const index = store.rankings.findIndex((r) => r.id === rankingId)
   if (index === -1) return false
+  const category = store.rankings[index].category
   store.rankings.splice(index, 1)
+  compactCategoryRanks(category)
   return true
 }
 

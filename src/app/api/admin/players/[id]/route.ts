@@ -56,20 +56,54 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             })
         }
 
-        // Update ranking
-        const updated = await prisma.playerRanking.update({
-            where: { id: rankingId },
-            data: {
-                ...(rank !== undefined && { rank: Number(rank) }),
-                ...(points !== undefined && { points: Number(points) }),
-                ...(badges !== undefined && { badges: JSON.stringify(badges) }),
-            },
-            include: { player: true }
+        const desiredRank = rank !== undefined ? Number(rank) : undefined
+        if (desiredRank !== undefined && (!Number.isFinite(desiredRank) || desiredRank < 1)) {
+            return NextResponse.json({ error: 'rank must be a positive number' }, { status: 400 })
+        }
+
+        let updated
+        await prisma.$transaction(async (tx) => {
+            if (desiredRank !== undefined) {
+                const categoryCount = await tx.playerRanking.count({ where: { category: ranking.category } })
+                const maxRank = Math.max(categoryCount, 1)
+                const targetRank = Math.min(Math.max(Math.floor(desiredRank), 1), maxRank)
+
+                if (targetRank < ranking.rank) {
+                    await tx.playerRanking.updateMany({
+                        where: { category: ranking.category, rank: { gte: targetRank, lt: ranking.rank } },
+                        data: { rank: { increment: 1 } },
+                    })
+                } else if (targetRank > ranking.rank) {
+                    await tx.playerRanking.updateMany({
+                        where: { category: ranking.category, rank: { gt: ranking.rank, lte: targetRank } },
+                        data: { rank: { decrement: 1 } },
+                    })
+                }
+
+                updated = await tx.playerRanking.update({
+                    where: { id: rankingId },
+                    data: {
+                        rank: targetRank,
+                        ...(points !== undefined && { points: Number(points) }),
+                        ...(badges !== undefined && { badges: JSON.stringify(badges) }),
+                    },
+                    include: { player: true }
+                })
+            } else {
+                updated = await tx.playerRanking.update({
+                    where: { id: rankingId },
+                    data: {
+                        ...(points !== undefined && { points: Number(points) }),
+                        ...(badges !== undefined && { badges: JSON.stringify(badges) }),
+                    },
+                    include: { player: true }
+                })
+            }
         })
 
         return NextResponse.json({
             success: true,
-            ranking: { ...updated, badges: JSON.parse(updated.badges) }
+            ranking: { ...updated!, badges: JSON.parse(updated!.badges) }
         })
     } catch (error) {
         console.error('Update player error:', error)
@@ -98,7 +132,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         const { id } = await params
         rankingId = parseInt(id)
 
-        await prisma.playerRanking.delete({ where: { id: rankingId } })
+        const ranking = await prisma.playerRanking.findUnique({ where: { id: rankingId } })
+        if (!ranking) return NextResponse.json({ error: 'Ranking not found' }, { status: 404 })
+
+        await prisma.$transaction([
+            prisma.playerRanking.delete({ where: { id: rankingId } }),
+            prisma.playerRanking.updateMany({
+                where: { category: ranking.category, rank: { gt: ranking.rank } },
+                data: { rank: { decrement: 1 } },
+            }),
+        ])
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error('Delete error:', error)

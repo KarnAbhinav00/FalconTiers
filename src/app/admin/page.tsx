@@ -640,7 +640,7 @@ export default function AdminPage() {
                                         <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>Purge All Applications</div>
                                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Delete all REJECTED and PENDING applications</div>
                                     </div>
-                                    <button className="btn btn-sm btn-danger" onClick={() => setModal({ title: 'Purge Applications', message: 'Delete all REJECTED and PENDING applications? This cannot be undone.', danger: true, onConfirm: async () => { setModal(null); showToast('Applications purged', 'success') } })}>Purge</button>
+                                    <button className="btn btn-sm btn-danger" onClick={() => setModal({ title: 'Purge Applications', message: 'Delete all REJECTED and PENDING applications? This cannot be undone.', danger: true, onConfirm: async () => { setModal(null); const r = await fetch('/api/admin/applications?mode=pending_rejected', { method: 'DELETE' }); const d = await r.json(); if (r.ok) { showToast(`Applications purged (${d.deleted})`, 'success'); fetchApps() } else showToast(d.error || 'Purge failed', 'error') } })}>Purge</button>
                                 </div>
                             </div>
                         </div>
