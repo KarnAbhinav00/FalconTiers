@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
-export default function LoginPage() {
+function LoginContent() {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
@@ -155,5 +155,21 @@ export default function LoginPage() {
             </main>
             <Footer />
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <Navbar />
+                <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="spinner" />
+                </main>
+                <Footer />
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     )
 }
