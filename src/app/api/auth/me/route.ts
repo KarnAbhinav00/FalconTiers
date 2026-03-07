@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
+import { clearAuthCookie, getTokenPayloadFromRequest } from '@/lib/auth'
 
 export async function GET(req: NextRequest) {
     try {
-        const token = req.cookies.get('token')?.value
-        if (!token) return NextResponse.json({ user: null })
-
-        const { payload } = await jwtVerify(token, JWT_SECRET)
+        const payload = await getTokenPayloadFromRequest(req)
+        if (!payload) return NextResponse.json({ user: null })
         const userId = payload.userId as number
         let user = null
         try {
@@ -46,7 +42,7 @@ export async function GET(req: NextRequest) {
         if (!user) return NextResponse.json({ user: null })
         if (user.isBanned) {
             const response = NextResponse.json({ user: null, banned: true })
-            response.cookies.set('token', '', { httpOnly: true, maxAge: 0, path: '/' })
+            clearAuthCookie(response)
             return response
         }
         let player = null
@@ -68,10 +64,8 @@ export async function GET(req: NextRequest) {
 // PATCH: update user profile
 export async function PATCH(req: NextRequest) {
     try {
-        const token = req.cookies.get('token')?.value
-        if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-        const { payload } = await jwtVerify(token, JWT_SECRET)
+        const payload = await getTokenPayloadFromRequest(req)
+        if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         const userId = payload.userId as number
 
         const { displayName, avatarUrl, bio, igName } = await req.json()

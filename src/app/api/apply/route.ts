@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
+import { getTokenPayloadFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 async function getUser(req: NextRequest) {
-    const token = req.cookies.get('token')?.value
-    if (!token) return null
-    try {
-        const { payload } = await jwtVerify(token, JWT_SECRET)
-        return payload
-    } catch { return null }
+    return getTokenPayloadFromRequest(req)
 }
 
 // POST: submit application
 export async function POST(req: NextRequest) {
     try {
+        const rl = rateLimit(req, 'apply:create', 8, 60_000)
+        if (!rl.ok) {
+            return NextResponse.json(
+                { error: 'Too many submissions. Please wait and try again.' },
+                { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+            )
+        }
+
         const user = await getUser(req)
         if (!user) return NextResponse.json({ error: 'Must be logged in to apply' }, { status: 401 })
 

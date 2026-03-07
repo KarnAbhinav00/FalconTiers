@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { SignJWT } from 'jose'
 import { prisma } from '@/lib/prisma'
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
+import { setAuthCookie, signAuthToken } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function POST(req: NextRequest) {
     try {
+        const rl = rateLimit(req, 'auth:register', 6, 60_000)
+        if (!rl.ok) {
+            return NextResponse.json(
+                { error: 'Too many registration attempts. Please wait and try again.' },
+                { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+            )
+        }
+
         const { username, email, password, igName } = await req.json()
 
         if (!username || !email || !password) {
@@ -35,27 +42,18 @@ export async function POST(req: NextRequest) {
             }
         })
 
-        const token = await new SignJWT({
+        const token = await signAuthToken({
             userId: user.id,
             username: user.username,
             role: user.role
         })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setExpirationTime('7d')
-            .sign(JWT_SECRET)
 
         const response = NextResponse.json({
             success: true,
             user: { id: user.id, username: user.username, email: user.email, role: user.role }
         })
 
-        response.cookies.set('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7,
-            path: '/',
-        })
+        setAuthCookie(response, token)
 
         return response
     } catch (error) {

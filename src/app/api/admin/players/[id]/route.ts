@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { runtimeDeleteRanking, runtimeUpdateRanking } from '@/lib/runtimeStore'
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
-
-async function getAdminUser(req: NextRequest) {
-    const token = req.cookies.get('token')?.value
-    if (!token) return null
-    try {
-        const { payload } = await jwtVerify(token, JWT_SECRET)
-        if (payload.role !== 'ADMIN') return null
-        return payload
-    } catch {
-        return null
-    }
-}
+import { getAdminPayloadFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 // PUT /api/admin/players/[id] - update a player ranking
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const admin = await getAdminUser(req)
+    const rl = rateLimit(req, 'admin:players:id:update', 90, 60_000)
+    if (!rl.ok) {
+        return NextResponse.json(
+            { error: 'Too many requests. Try again shortly.' },
+            { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+        )
+    }
+
+    const admin = await getAdminPayloadFromRequest(req)
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     let rankingId = -1
     let rank: number | undefined
@@ -124,7 +119,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 // DELETE /api/admin/players/[id] - delete a player ranking
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const admin = await getAdminUser(req)
+    const rl = rateLimit(req, 'admin:players:id:delete', 60, 60_000)
+    if (!rl.ok) {
+        return NextResponse.json(
+            { error: 'Too many requests. Try again shortly.' },
+            { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+        )
+    }
+
+    const admin = await getAdminPayloadFromRequest(req)
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     let rankingId = -1
 

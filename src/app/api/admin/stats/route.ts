@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { runtimeCategoryCounts } from '@/lib/runtimeStore'
+import { getAdminPayloadFromRequest } from '@/lib/auth'
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'falcon-tiers-secret-2024')
 const CATEGORIES = ['CPVP', 'NETHPOT', 'CRYSTAL', 'UHC', 'SMP', 'POT', 'AXE', 'SWORD', 'MACE', 'DSMP', 'CART', 'SMPKIT']
 
 export async function GET(req: NextRequest) {
-  const token = req.cookies.get('token')?.value
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  let payload
-  try {
-    const verified = await jwtVerify(token, JWT_SECRET)
-    payload = verified.payload
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+  const payload = await getAdminPayloadFromRequest(req)
+  if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (payload.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
