@@ -117,8 +117,13 @@ export default function AdminPage() {
     const fetchRankings = useCallback(async () => {
         setRankingsLoading(true)
         try {
-            const [s, p] = await Promise.all([fetch('/api/admin/stats'), fetch('/api/admin/players')])
+            let s = await fetch('/api/admin/stats')
+            if (s.status === 401) {
+                await new Promise(resolve => setTimeout(resolve, 500))
+                s = await fetch('/api/admin/stats')
+            }
             if (s.status === 401) { router.push('/login?from=admin'); return }
+            const p = await fetch('/api/admin/players')
             const sd = await s.json(); const pd = await p.json()
             setStats(sd)
             const all: any[] = []

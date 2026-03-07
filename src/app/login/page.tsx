@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
@@ -11,7 +11,6 @@ function LoginContent() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
-    const router = useRouter()
     const searchParams = useSearchParams()
     const from = searchParams.get('from')
 
@@ -31,8 +30,9 @@ function LoginContent() {
                 setLoading(false)
                 return
             }
-            if (d.user?.role === 'ADMIN' || from === 'admin') router.push('/admin')
-            else router.push('/')
+            // Force full navigation so auth cookie is committed before protected-route checks run.
+            if (d.user?.role === 'ADMIN' || from === 'admin') window.location.assign('/admin')
+            else window.location.assign('/')
         } catch {
             setError('Something went wrong. Please try again.')
             setLoading(false)
