@@ -1,0 +1,72 @@
+// Falcon Tiers - Player Ranking Platform Schema v2
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  email       String   @unique
+  password    String
+  role        String   @default("PLAYER") // PLAYER | ADMIN
+  igName      String   @default("") // In-game name
+  displayName String   @default("")
+  avatarUrl   String   @default("")
+  bio         String   @default("")
+  isBanned    Boolean  @default(false)
+  banReason   String   @default("")
+  createdAt   DateTime @default(now())
+  player      Player?
+  applications Application[]
+}
+
+model Player {
+  id           Int              @id @default(autoincrement())
+  username     String           @unique
+  displayName  String
+  avatarUrl    String           @default("")
+  bio          String           @default("")
+  userId       Int?             @unique
+  user         User?            @relation(fields: [userId], references: [id])
+  rankings     PlayerRanking[]
+  createdAt    DateTime         @default(now())
+}
+
+model PlayerRanking {
+  id        Int      @id @default(autoincrement())
+  playerId  Int
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  category  String   // CPVP | NETHPOT | SMPKIT | CART | SWORD | UHC
+  rank      Int
+  points    Int      @default(0)
+  badges    String   @default("[]") // JSON array of badge codes: HT1-HT5, LT1-LT5
+  createdAt DateTime @default(now())
+
+  @@unique([playerId, category])
+}
+
+model Application {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  igName      String
+  category    String   // Which category they're applying for
+  experience  String   // Text about their experience
+  proofUrl    String   @default("") // Screenshot/video link
+  status      String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  adminNote   String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteSetting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
