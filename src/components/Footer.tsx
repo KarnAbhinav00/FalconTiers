@@ -114,19 +114,39 @@ export default function Footer() {
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                     © 2026 Falcon Tiers. All rights reserved.
                 </div>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Made with ♥ by{' '}
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>Made by</span>
+                        <a
+                            href="https://abhinav.ice.lol"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                color: 'var(--accent)',
+                                textDecoration: 'none',
+                                fontWeight: 600,
+                            }}
+                        >
+                            Tyson
+                        </a>
+                    </div>
+                    <span style={{ color: 'var(--border)' }}>|</span>
                     <a
-                        href="https://abhinav.ice.lol"
+                        href="https://github.com/KarnAbhinav00"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                            color: 'var(--accent)',
+                            color: 'var(--text-secondary)',
                             textDecoration: 'none',
-                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'color 0.2s',
                         }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
                     >
-                        Tyson
+                        <i className="fa-brands fa-github"></i> GitHub
                     </a>
                 </div>
             </div>

@@ -22,6 +22,10 @@ Welcome to **Falcon Tiers**, an exclusive, high-performance tier list web applic
 
 ## 🔒 License
 
-**Copyright © KarnAbhinav00. All Rights Reserved.**
+**Copyright © 2026 KarnAbhinav00 (Tyson).**
 
-This repository and its contents are proprietary and confidential. No part of this software may be used, reproduced, distributed, or transmitted in any form or by any means without the prior written permission of the copyright owner. See the [LICENSE](./LICENSE) file for more information.
+This software is released under a modified MIT License. You are free to use, modify, and redistribute this software provided that you give **full credit** to the original author with links to:
+- [GitHub](https://github.com/KarnAbhinav00)
+- [Portfolio](https://abhinav.ice.lol)
+
+For full details, please see the [LICENSE](./LICENSE) file.
