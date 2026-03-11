@@ -1,52 +1,27 @@
-# Falcon Tiers
+# 🦅 Falcon Tiers
 
-Falcon Tiers is a Next.js PvP ranking platform with public rankings and an admin panel.
+![Next.js](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white) 
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 
-## Production Requirements
+Welcome to **Falcon Tiers**, an exclusive, high-performance tier list web application. Manage, rank, and organize tiers with a sleek, dark, neon-red inspired design and seamless drag-and-drop capabilities. Built using the modern Next.js ecosystem.
 
-Set these environment variables in your deployment platform:
+## 🚀 Features
 
-- `DATABASE_URL` (Prisma database connection)
-- `JWT_SECRET` (at least 32 characters, random)
-- `ADMIN_USERNAME` (optional fallback admin user)
-- `ADMIN_PASSWORD` (optional fallback admin password)
-- `NODE_ENV=production`
+- **Drag-and-Drop functionality**: Effortlessly manage tiers and rank items.
+- **Dynamic Categorization**: Support for multiple categories (Crystal, UHC, SMP, etc.).
+- **Modern UI**: A responsive, dark-themed, and fully animated user interface.
+- **Full-stack Architecture**: Next.js App Router API, backend powered by Prisma.
 
-Notes:
+## 🛠️ Tech Stack
 
-- In production, weak/default admin fallback credentials are blocked.
-- Authentication endpoints are rate-limited.
-- Build step runs `prisma generate` automatically.
+- **Frontend**: Next.js, React, Tailwind CSS, Lucide Icons, dnd-kit
+- **Backend / Database**: Prisma
 
-## Local Development
+## 🔒 License
 
-1. Install dependencies:
+**Copyright © KarnAbhinav00. All Rights Reserved.**
 
-```bash
-npm install
-```
-
-2. Copy `.env.example` to `.env` and fill values.
-
-3. Run Prisma migrations:
-
-```bash
-npx prisma migrate deploy
-```
-
-4. Start dev server:
-
-```bash
-npm run dev
-```
-
-## Build
-
-```bash
-npm run build
-npm run start
-```
-
-## License
-
-This project is proprietary. See `LICENSE`.
+This repository and its contents are proprietary and confidential. No part of this software may be used, reproduced, distributed, or transmitted in any form or by any means without the prior written permission of the copyright owner. See the [LICENSE](./LICENSE) file for more information.
