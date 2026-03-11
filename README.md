@@ -8,6 +8,11 @@
 
 Welcome to **Falcon Tiers**, an exclusive, high-performance tier list web application. Manage, rank, and organize tiers with a sleek, dark, neon-red inspired design and seamless drag-and-drop capabilities. Built using the modern Next.js ecosystem.
 
+## 📦 Latest Release
+
+[**Download v1.0.0**](https://github.com/KarnAbhinav00/FalconTiers/releases/tag/v1.0.0)
+
+
 ## 🚀 Features
 
 - **Drag-and-Drop functionality**: Effortlessly manage tiers and rank items.
